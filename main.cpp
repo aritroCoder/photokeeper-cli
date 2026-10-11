@@ -31,9 +31,6 @@ static void for_each_parallel(size_t n, int workers, const std::function<void(si
     for (auto& t : pool) t.join();
 }
 
-// shortcut: full decode then INTER_AREA, no codec-side downscale like the Python had; add it when the CLI needs phone-photo speed
-static cv::Mat decode(const std::string& path) { return cv::imread(path, cv::IMREAD_COLOR); }
-
 // Classify every image in the manifest; print the confusion matrix plus per-source accuracy.
 // Undecodable images count as 'delete'.
 static void run_eval(const std::string& manifest, int workers) {
@@ -50,7 +47,7 @@ static void run_eval(const std::string& manifest, int workers) {
     }
     std::vector<std::string> predicted(rows.size());
     for_each_parallel(rows.size(), workers, [&](size_t i) {
-        cv::Mat img = decode((root / rows[i][0]).string());
+        cv::Mat img = pk::load((root / rows[i][0]).string());
         predicted[i] = !img.empty() && pk::keep(pk::analyze(img)) ? "keep" : "delete";
     });
     std::map<std::pair<std::string, std::string>, int> matrix;
@@ -95,7 +92,7 @@ int main(int argc, char** argv) {
     auto t0 = std::chrono::steady_clock::now();
     std::mutex out;
     for_each_parallel(paths.size(), workers, [&](size_t i) {
-        cv::Mat img = decode(paths[i]);
+        cv::Mat img = pk::load(paths[i]);
         std::string line;
         if (img.empty()) {
             line = "error\t" + paths[i] + "\tcannot decode";

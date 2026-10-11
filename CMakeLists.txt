@@ -10,7 +10,7 @@ endif()
 find_package(OpenCV REQUIRED COMPONENTS core imgproc imgcodecs dnn objdetect)
 find_package(Threads REQUIRED)
 
-add_library(pipeline pipeline_c/pipeline.cpp pipeline_c/edges.cpp pipeline_c/faces.cpp
+add_library(pipeline pipeline_c/pipeline.cpp pipeline_c/load.cpp pipeline_c/edges.cpp pipeline_c/faces.cpp
                      pipeline_c/palette.cpp pipeline_c/quality.cpp pipeline_c/text.cpp)
 target_link_libraries(pipeline PUBLIC ${OpenCV_LIBS} Threads::Threads)
 target_include_directories(pipeline PUBLIC ${OpenCV_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR})
