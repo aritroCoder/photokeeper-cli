@@ -72,17 +72,19 @@ def clip(x):
 
 
 # per signal: map to a keep-likeness in [0, 1], and its weight; weights sum to 1.
-# Ramps come from the keep/delete quantiles on dataset/; tuned there to 84% (screenshots and documents ~100%,
-# photos ~92%, memes ~35% because the text detector misses most meme text at 320px).
+# Ramps come from the keep/delete quantiles on dataset/. Text carries 0.4 so a caption can outvote the
+# photo-like features of a meme; a logistic fit on the same features reaches 93.5%, these give 93.2%
+# (screenshots/documents 99.5%, photos 92%, memes 83%). Weights and threshold interact: text 0.4 at
+# threshold 0.5 lets screenshots through, so change them as a pair against `--eval`.
 FEATURES = {
-    "faces": (lambda v: min(v, 1), 0.10),
-    "palette_flatness": (lambda v: clip((0.9 - v) / 0.4), 0.25),
-    "axis_edge_ratio": (lambda v: clip((0.6 - v) / 0.4), 0.25),
-    "blur": (lambda v: clip(v / 300), 0.05),
-    "clipped": (lambda v: clip(1 - v / 0.3), 0.15),
-    "text_area_ratio": (lambda v: clip(1 - v / 0.05), 0.20),
+    "faces": (lambda v: min(v, 1), 0.08),
+    "palette_flatness": (lambda v: clip((0.9 - v) / 0.4), 0.19),
+    "axis_edge_ratio": (lambda v: clip((0.6 - v) / 0.4), 0.19),
+    "blur": (lambda v: clip(v / 300), 0.03),
+    "clipped": (lambda v: clip(1 - v / 0.3), 0.11),
+    "text_area_ratio": (lambda v: clip(1 - v / 0.05), 0.40),
 }
-KEEP_THRESHOLD = 0.5
+KEEP_THRESHOLD = 0.55
 
 
 def classify_image_features(result):
