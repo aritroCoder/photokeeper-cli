@@ -43,9 +43,7 @@ int main() {
             std::string path = dir + "/img" + ext;
             cv::imwrite(path, big);
             cv::Mat loaded = pk::load(path);
-            assert(std::max(loaded.rows, loaded.cols) >= pk::SIDE);
-            assert(std::max(loaded.rows, loaded.cols) < 2 * pk::SIDE || size.height < 2 * pk::SIDE);
-            assert(std::max(pk::thumbnail(loaded).rows, pk::thumbnail(loaded).cols) == pk::SIDE);
+            assert(std::max(loaded.rows, loaded.cols) == pk::SIDE);
         }
     std::filesystem::remove_all(dir);
 

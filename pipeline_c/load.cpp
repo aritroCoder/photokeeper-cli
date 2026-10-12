@@ -63,7 +63,7 @@ cv::Mat load(const std::string& path) {
                : long_edge >= 4 * SIDE ? cv::IMREAD_REDUCED_COLOR_4
                : long_edge >= 2 * SIDE ? cv::IMREAD_REDUCED_COLOR_2
                                        : cv::IMREAD_COLOR;
-    return cv::imread(path, flag);
+    return thumbnail(cv::imread(path, flag));
 }
 
 }  // namespace pk

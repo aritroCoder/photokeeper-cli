@@ -19,7 +19,11 @@ double blur(const cv::Mat& gray);
 double clipped(const cv::Mat& gray);
 double text_area_ratio(const cv::Mat& bgr);
 
-cv::Mat load(const std::string& path);  // decode with codec-side downscale, long edge stays >= SIDE; empty if undecodable
+// signal table in SIGNAL_NAMES order; doubles as task priority within an image: decisive and cheap first, slowest last
+using Signal = double (*)(const cv::Mat& bgr, const cv::Mat& gray);
+extern const Signal SIGNALS[N];
+
+cv::Mat load(const std::string& path);  // decode to a SIDE-px thumbnail; empty if undecodable
 cv::Mat thumbnail(const cv::Mat& bgr);  // shrink so the long edge is at most SIDE
 Features analyze(const cv::Mat& bgr);   // every signal on thumbnail(bgr)
 bool keep(const Features& f);           // false means delete

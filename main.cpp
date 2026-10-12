@@ -3,32 +3,126 @@
 #include <atomic>
 #include <chrono>
 #include <cmath>
+#include <condition_variable>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <functional>
 #include <map>
 #include <mutex>
+#include <optional>
+#include <queue>
 #include <sstream>
 #include <string>
 #include <thread>
+#include <tuple>
 #include <vector>
 
 #include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc.hpp>
 
 #include "pipeline_c/pipeline.h"
 
 namespace fs = std::filesystem;
 
-// Each worker takes an image end to end, so decoded thumbnails in flight never exceed the worker count.
-static void for_each_parallel(size_t n, int workers, const std::function<void(size_t)>& fn) {
-    std::atomic<size_t> next{0};
-    std::vector<std::thread> pool;
-    for (int w = 0; w < workers; ++w)
-        pool.emplace_back([&] {
-            for (size_t i; (i = next++) < n;) fn(i);
-        });
-    for (auto& t : pool) t.join();
+// Blocking queue that pops the smallest (image, stage) first, like Python's queue.PriorityQueue.
+template <class T>
+struct PriorityQueue {
+    std::priority_queue<T, std::vector<T>, std::greater<T>> q;
+    std::mutex m;
+    std::condition_variable cv;
+    void push(T v) {
+        {
+            std::lock_guard<std::mutex> lock(m);
+            q.push(std::move(v));
+        }
+        cv.notify_one();
+    }
+    T pop() {
+        std::unique_lock<std::mutex> lock(m);
+        cv.wait(lock, [&] { return !q.empty(); });
+        T v = q.top();
+        q.pop();
+        return v;
+    }
+};
+
+struct Task {
+    size_t image;
+    int stage;  // 0 decodes paths[image]; k >= 1 runs SIGNALS[k - 1] on the decoded thumbnail
+    std::function<double()> job;
+    bool operator>(const Task& o) const { return std::tie(image, stage) > std::tie(o.image, o.stage); }
+};
+
+struct Msg {
+    size_t image;
+    int stage;  // 0 means the decode failed, the only message that image will send
+    double value;
+    bool operator>(const Msg& o) const { return std::tie(image, stage) > std::tie(o.image, o.stage); }
+};
+
+// Call on_result(index, features) as images finish, in any order. features is empty if decoding failed,
+// otherwise NaN marks a signal that threw.
+//
+// One priority queue of (image index, stage) tasks. Loads are queued up front; an image's signal
+// tasks are queued when its decode finishes and sort ahead of later loads, so decoded thumbnails
+// in flight stay near the worker count no matter how many paths are given.
+static void analyze_all(const std::vector<std::string>& paths, int workers,
+                        const std::function<void(size_t, std::optional<pk::Features>)>& on_result) {
+    PriorityQueue<Task> tasks;
+    PriorityQueue<Msg> out;
+    std::atomic<bool> stop{false};
+    for (size_t i = 0; i < paths.size(); ++i) tasks.push({i, 0, {}});
+
+    auto work = [&] {
+        while (true) {
+            Task t = tasks.pop();
+            if (stop) return;
+            if (t.stage == 0) {
+                cv::Mat bgr, gray;
+                try {
+                    bgr = pk::load(paths[t.image]);
+                } catch (const cv::Exception&) {  // undecodable
+                }
+                if (bgr.empty()) {
+                    out.push({t.image, 0, NAN});
+                    continue;
+                }
+                cv::cvtColor(bgr, gray, cv::COLOR_BGR2GRAY);
+                for (int k = 0; k < pk::N; ++k) tasks.push({t.image, k + 1, [=] { return pk::SIGNALS[k](bgr, gray); }});
+            } else {
+                double value;
+                try {
+                    value = t.job();
+                } catch (const cv::Exception&) {  // OpenCV rejected the pixels
+                    value = NAN;
+                }
+                out.push({t.image, t.stage, value});
+            }
+        }
+    };
+
+    std::vector<std::thread> threads;
+    for (int w = 0; w < workers; ++w) threads.emplace_back(work);
+    std::map<size_t, std::pair<int, pk::Features>> results;  // signals received so far, values
+    for (size_t finished = 0; finished < paths.size();) {
+        Msg m = out.pop();
+        if (m.stage == 0) {
+            ++finished;
+            on_result(m.image, std::nullopt);
+            continue;
+        }
+        auto& [count, features] = results[m.image];
+        features[m.stage - 1] = m.value;
+        if (++count == pk::N) {
+            ++finished;
+            on_result(m.image, features);
+            results.erase(m.image);
+        }
+    }
+    stop = true;  // one wake-up item per worker, each exits on stop
+    for (size_t w = 0; w < threads.size(); ++w) tasks.push({SIZE_MAX, 0, {}});
+    for (auto& t : threads) t.join();
 }
 
 // Classify every image in the manifest; print the confusion matrix plus per-source accuracy.
@@ -45,10 +139,11 @@ static void run_eval(const std::string& manifest, int workers) {
         for (auto& field : r) std::getline(ss, field, ',');  // shortcut: no quoted fields, enough for dataset/manifest.csv
         rows.push_back(r);
     }
+    std::vector<std::string> paths;
+    for (const auto& r : rows) paths.push_back((root / r[0]).string());
     std::vector<std::string> predicted(rows.size());
-    for_each_parallel(rows.size(), workers, [&](size_t i) {
-        cv::Mat img = pk::load((root / rows[i][0]).string());
-        predicted[i] = !img.empty() && pk::keep(pk::analyze(img)) ? "keep" : "delete";
+    analyze_all(paths, workers, [&](size_t i, std::optional<pk::Features> f) {
+        predicted[i] = f && pk::keep(*f) ? "keep" : "delete";
     });
     std::map<std::pair<std::string, std::string>, int> matrix;
     std::map<std::string, std::pair<int, int>> by_source;  // hits, total
@@ -90,18 +185,13 @@ int main(int argc, char** argv) {
         return 0;
     }
     auto t0 = std::chrono::steady_clock::now();
-    std::mutex out;
-    for_each_parallel(paths.size(), workers, [&](size_t i) {
-        cv::Mat img = pk::load(paths[i]);
-        std::string line;
-        if (img.empty()) {
-            line = "error\t" + paths[i] + "\tcannot decode";
-        } else {
-            pk::Features f = pk::analyze(img);
-            line = (pk::keep(f) ? "keep\t" : "delete\t") + paths[i];
-            for (int k = 0; k < pk::N; ++k) line += (k ? " " : "\t") + std::string(pk::SIGNAL_NAMES[k]) + "=" + std::to_string(f[k]);
+    analyze_all(paths, workers, [&](size_t i, std::optional<pk::Features> f) {
+        if (!f) {
+            std::printf("error\t%s\tcannot decode\n", paths[i].c_str());
+            return;
         }
-        std::lock_guard<std::mutex> lock(out);
+        std::string line = (pk::keep(*f) ? "keep\t" : "delete\t") + paths[i];
+        for (int k = 0; k < pk::N; ++k) line += (k ? " " : "\t") + std::string(pk::SIGNAL_NAMES[k]) + "=" + std::to_string((*f)[k]);
         std::puts(line.c_str());
     });
     double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();

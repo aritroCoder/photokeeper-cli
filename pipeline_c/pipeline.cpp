@@ -9,8 +9,7 @@ namespace pk {
 
 const char* const SIGNAL_NAMES[N] = {"faces", "palette_flatness", "axis_edge_ratio", "blur", "clipped", "text_area_ratio"};
 
-using Signal = double (*)(const cv::Mat& bgr, const cv::Mat& gray);
-static const Signal SIGNALS[N] = {
+const Signal SIGNALS[N] = {
     [](const cv::Mat& bgr, const cv::Mat&) { return double(faces(bgr)); },
     [](const cv::Mat& bgr, const cv::Mat&) { return palette_flatness(bgr); },
     [](const cv::Mat&, const cv::Mat& gray) { return axis_edge_ratio(gray); },
