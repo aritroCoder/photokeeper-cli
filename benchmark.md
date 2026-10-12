@@ -37,16 +37,19 @@ when the user opens one photo:
 
 | | PhotoKeeper | CLIP ViT-B/32 | Czkawka |
 |---|---|---|---|
-| process start, no images (models loaded) | 66 MB | | |
+| process start, no images (models loaded) | 66 MB | 542 MB | 11 MB |
 | 1 image | **117 MB** | 915 MB | 33 MB |
-| 1000 images, 1 worker | 123 MB | | |
+| 1000 images, one in flight | 123 MB (1 worker) | 972 MB (batch 1) | 44 MB (1 thread) |
 | 1000 images, parallel (table above) | 248 MB (8 workers) | 1895 MB (batch 32) | 589 MB (24 threads) |
 
 For PhotoKeeper the floor is the two detectors (~50 MB once both have run) on top of a ~66 MB
-process; each extra worker adds ~16 MB. These are peaks, not averages: RSS does not shrink
-between images, so the average over a run is within a few MB of the peak. Single-image RSS was
-measured in a later session than the table; memory is not affected by machine load, timings are,
-so the timing columns were not re-taken.
+process; each extra worker adds ~16 MB. CLIP's floor is the model (542 MB before any image), and
+one image adds ~370 MB of activations. Czkawka has no model; its memory is almost entirely
+per-thread decode buffers, which is why it is the smallest at one thread and the second largest
+at 24. These are peaks, not averages: RSS does not shrink between images, so the average over a
+run is within a few MB of the peak. The one-in-flight runs also give the serial speed: PhotoKeeper
+36 s, CLIP 76 s, Czkawka 11 s for 1000 images (same later session, so not comparable to the main
+table's timings, which were taken on an idle host; memory is unaffected by load).
 
 ## The dataset
 
