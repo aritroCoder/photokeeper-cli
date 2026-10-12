@@ -124,13 +124,23 @@ Run: `czkawka_cli image -d <abs path>/dataset -H -f out.txt`
 
 ### Blur-only threshold
 
-What it is: the heuristic people assume a "photo cleaner" is: variance of the Laplacian on the
-grey thumbnail, keep if ≥ 100. Computed from PhotoKeeper's own `blur` output, so no separate
-timing.
+What it is: variance of the Laplacian on the grey thumbnail, keep if ≥ 100. The measure comes
+from Pech-Pacheco et al., "Diatom autofocusing in brightfield microscopy: a comparative study",
+ICPR 2000 ([doi:10.1109/ICPR.2000.903548](https://doi.org/10.1109/ICPR.2000.903548)), listed as
+LAPV in Pertuz et al.'s survey of 36 focus measures, "Analysis of focus measure operators for
+shape-from-focus", Pattern Recognition 2013
+([doi:10.1016/j.patcog.2012.11.011](https://doi.org/10.1016/j.patcog.2012.11.011)). It became the
+default blur check in OpenCV code through Rosebrock's 2015 tutorial
+["Blur detection with OpenCV"](https://pyimagesearch.com/2015/09/07/blur-detection-with-opencv/),
+which is one line (`cv2.Laplacian(gray, cv2.CV_64F).var()`), ships a default threshold of 100, and
+is what Stack Overflow and GitHub blur detectors cite. The threshold here is that default.
+Computed from PhotoKeeper's own `blur` output, so no separate timing.
 
-Why it is here: to show the floor. It gets 39%, worse than always answering `delete` (60%),
-because screenshots and scanned documents are the sharpest images in any library. Blur is one of
-our six signals and carries 3% of the weight for exactly this reason.
+Why it is here: to show the floor of a sharpness-only cleaner. It gets 39%, worse than always
+answering `delete` (60%), because screenshots and scanned documents are the sharpest images in any
+library. Blur is one of our six signals and carries 3% of the weight for exactly this reason.
+Rosebrock's own follow-up notes the method "required significant manual tuning" and proposes an
+FFT measure instead; neither fixes the screenshot problem, which is about content, not focus.
 
 ## Not benchmarked, and why
 
