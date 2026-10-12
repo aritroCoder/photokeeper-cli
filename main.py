@@ -28,7 +28,6 @@ SIGNALS = (  # order doubles as task priority within an image: decisive and chea
     ("faces", lambda bgr, gray: faces.count(bgr)),
     ("palette_flatness", lambda bgr, gray: palette.flatness(bgr)),
     ("axis_edge_ratio", lambda bgr, gray: edges.axis_aligned_ratio(gray)),
-    ("blur", lambda bgr, gray: quality.blur(gray)),
     ("clipped", lambda bgr, gray: quality.clipped(gray)),
     ("text_area_ratio", lambda bgr, gray: text.area_ratio(bgr)),
 )
@@ -73,16 +72,17 @@ def clip(x):
 
 # per signal: map to a keep-likeness in [0, 1], and its weight; weights sum to 1.
 # Ramps come from the keep/delete quantiles on dataset/. Text carries 0.4 so a caption can outvote the
-# photo-like features of a meme; a logistic fit on the same features reaches 93.5%, these give 93.2%
-# (screenshots/documents 99.5%, photos 92%, memes 83%). Weights and threshold interact: text 0.4 at
+# photo-like features of a meme; a logistic fit on the same features reaches 93.5%, these give 93.4%
+# (screenshots/documents 99.5%, photos 92%, memes 84%). Weights and threshold interact: text 0.4 at
 # threshold 0.5 lets screenshots through, so change them as a pair against `--eval`.
+# A blur signal (variance of Laplacian, weight 0.03) was dropped: dataset/ has no blurry class and
+# removing it did not change the eval; the other weights were rescaled by 1/0.97.
 FEATURES = {
-    "faces": (lambda v: min(v, 1), 0.08),
-    "palette_flatness": (lambda v: clip((0.9 - v) / 0.4), 0.19),
-    "axis_edge_ratio": (lambda v: clip((0.6 - v) / 0.4), 0.19),
-    "blur": (lambda v: clip(v / 300), 0.03),
-    "clipped": (lambda v: clip(1 - v / 0.3), 0.11),
-    "text_area_ratio": (lambda v: clip(1 - v / 0.05), 0.40),
+    "faces": (lambda v: min(v, 1), 0.082),
+    "palette_flatness": (lambda v: clip((0.9 - v) / 0.4), 0.196),
+    "axis_edge_ratio": (lambda v: clip((0.6 - v) / 0.4), 0.196),
+    "clipped": (lambda v: clip(1 - v / 0.3), 0.113),
+    "text_area_ratio": (lambda v: clip(1 - v / 0.05), 0.413),
 }
 KEEP_THRESHOLD = 0.55
 

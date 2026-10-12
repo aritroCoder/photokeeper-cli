@@ -20,7 +20,6 @@ gray_photo, gray_shot = (cv2.cvtColor(x, cv2.COLOR_BGR2GRAY) for x in (photo, sc
 
 assert palette.flatness(screenshot) > 0.9 > palette.flatness(photo)
 assert edges.axis_aligned_ratio(gray_shot) > edges.axis_aligned_ratio(gray_photo)
-assert quality.blur(gray_photo) > quality.blur(cv2.GaussianBlur(gray_photo, (0, 0), 6))
 assert quality.clipped(np.zeros((240, 320), np.uint8)) == 1.0
 assert text.area_ratio(screenshot) > 0.1 > text.area_ratio(photo)
 assert faces.count(photo) == 0
