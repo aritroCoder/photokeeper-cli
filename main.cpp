@@ -157,16 +157,28 @@ static void run_eval(const std::string& manifest, int workers) {
     for (const auto& [source, hits] : by_source) std::printf("  %-36s %.2f\n", source.c_str(), hits.first / double(hits.second));
 }
 
+static const char* USAGE =
+    "usage: photokeeper [-h] [-j WORKERS] [--eval [MANIFEST]] [paths ...]\n\n"
+    "  paths            image files or directories (searched recursively)\n"
+    "  -j, --workers N  worker threads (default: all cores)\n"
+    "  --eval [CSV]     run the eval instead (default: dataset/manifest.csv)\n";
+
 int main(int argc, char** argv) {
     int workers = std::thread::hardware_concurrency() ? std::thread::hardware_concurrency() : 4;
     std::string manifest;
     std::vector<std::string> paths;
     for (int i = 1; i < argc; ++i) {
         std::string a = argv[i];
-        if ((a == "-j" || a == "--workers") && i + 1 < argc) {
+        if (a == "-h" || a == "--help") {
+            std::fputs(USAGE, stdout);
+            return 0;
+        } else if ((a == "-j" || a == "--workers") && i + 1 < argc) {
             workers = std::stoi(argv[++i]);
         } else if (a == "--eval") {
             manifest = i + 1 < argc && argv[i + 1][0] != '-' ? argv[++i] : "dataset/manifest.csv";
+        } else if (a[0] == '-') {
+            std::fprintf(stderr, "unknown option %s\n%s", a.c_str(), USAGE);
+            return 2;
         } else if (fs::is_directory(a)) {
             std::vector<std::string> found;
             for (const auto& e : fs::recursive_directory_iterator(a))
