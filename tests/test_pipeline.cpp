@@ -21,14 +21,12 @@ int main() {
     cv::rectangle(screenshot, {10, 10}, {310, 60}, cv::Scalar::all(40), -1);
     for (int y = 100; y < 230; y += 25)
         cv::putText(screenshot, "Lorem ipsum dolor sit amet", {10, y}, cv::FONT_HERSHEY_SIMPLEX, 0.6, cv::Scalar::all(0), 2);
-    cv::Mat gray_photo, gray_shot, blurred;
+    cv::Mat gray_photo, gray_shot;
     cv::cvtColor(photo, gray_photo, cv::COLOR_BGR2GRAY);
     cv::cvtColor(screenshot, gray_shot, cv::COLOR_BGR2GRAY);
-    cv::GaussianBlur(gray_photo, blurred, {}, 6);
 
     assert(pk::palette_flatness(screenshot) > 0.9 && 0.9 > pk::palette_flatness(photo));
     assert(pk::axis_edge_ratio(gray_shot) > pk::axis_edge_ratio(gray_photo));
-    assert(pk::blur(gray_photo) > pk::blur(blurred));
     assert(pk::clipped(cv::Mat::zeros(240, 320, CV_8U)) == 1.0);
     assert(pk::text_area_ratio(screenshot) > 0.1 && 0.1 > pk::text_area_ratio(photo));
     assert(pk::faces(photo) == 0);
@@ -49,7 +47,7 @@ int main() {
 
     pk::Features shot = pk::analyze(screenshot);
     assert(pk::keep(pk::analyze(photo)) && !pk::keep(shot));
-    shot[5] = NAN;  // a failed signal is neutral, the rest still says delete
+    shot[4] = NAN;  // a failed signal (text) is neutral, the rest still says delete
     assert(!pk::keep(shot));
 
     // detectors are per thread: concurrent calls agree with the serial verdicts

@@ -14,12 +14,12 @@ Machine: WSL2 on Linux, 24 logical cores, 7 GB RAM. Measured 2026-10-12 with `/u
 | peak RSS | **242 MB** | 1895 MB | 589 MB | |
 | CPU time | 158 s | 277 s | 26 s | |
 | threads | 8 workers + OpenCV TBB | 12 (torch default) | 24 | |
-| accuracy | **0.933** | 0.916 | n/a | 0.389 |
-| F1 (delete) | **0.944** | 0.930 | n/a | 0.035 |
-| F1 (keep) | **0.916** | 0.896 | n/a | 0.553 |
-| macro F1 | **0.930** | 0.913 | n/a | 0.294 |
-| precision / recall (delete) | 0.945 / 0.943 | 0.934 / 0.925 | n/a | 0.333 / 0.018 |
-| confusion (kk, kd, dk, dd) | 367, 33, 34, 566 | 361, 39, 45, 555 | | 378, 22, 589, 11 |
+| accuracy | **0.934** | 0.916 | n/a | 0.389 |
+| F1 (delete) | **0.945** | 0.930 | n/a | 0.035 |
+| F1 (keep) | **0.917** | 0.896 | n/a | 0.553 |
+| macro F1 | **0.931** | 0.913 | n/a | 0.294 |
+| precision / recall (delete) | 0.942 / 0.948 | 0.934 / 0.925 | n/a | 0.333 / 0.018 |
+| confusion (kk, kd, dk, dd) | 365, 35, 31, 569 | 361, 39, 45, 555 | | 378, 22, 589, 11 |
 | model size on disk | 2.6 MB | ~600 MB | 0 | 0 |
 
 Positive class for precision/recall/F1 is `delete`, so a false positive is a keeper wrongly
@@ -67,10 +67,13 @@ out of sample, not a collapse.
 
 ### PhotoKeeper
 
-What it does: one `keep`/`delete` verdict per image from six cheap signals on a 320 px thumbnail:
-face count (YuNet, 233 KB ONNX), palette flatness, axis-aligned edge ratio, Laplacian blur,
-clipped-pixel fraction, and text area ratio (PP-OCRv3 DB detector, 2.4 MB ONNX). A weighted sum
-with hand-set ramps decides. Everything runs on-device through OpenCV; see `pipeline_c/`.
+What it does: one `keep`/`delete` verdict per image from five cheap signals on a 320 px thumbnail:
+face count (YuNet, 233 KB ONNX), palette flatness, axis-aligned edge ratio, clipped-pixel
+fraction, and text area ratio (PP-OCRv3 DB detector, 2.4 MB ONNX). A weighted sum with hand-set
+ramps decides. Everything runs on-device through OpenCV; see `pipeline_c/`. An earlier sixth
+signal, variance-of-Laplacian blur at 3% weight, was removed after measuring that dropping it
+left the eval unchanged (0.933 → 0.934); the timing and memory rows were taken with it still in
+and are at most ~0.1 ms/img pessimistic.
 
 What it does not do: find duplicates or near-duplicates, group bursts, rate aesthetics, or
 understand content beyond "has faces" and "has text". A sharp, well-exposed photo of nothing
@@ -134,11 +137,13 @@ default blur check in OpenCV code through Rosebrock's 2015 tutorial
 ["Blur detection with OpenCV"](https://pyimagesearch.com/2015/09/07/blur-detection-with-opencv/),
 which is one line (`cv2.Laplacian(gray, cv2.CV_64F).var()`), ships a default threshold of 100, and
 is what Stack Overflow and GitHub blur detectors cite. The threshold here is that default.
-Computed from PhotoKeeper's own `blur` output, so no separate timing.
+Computed from PhotoKeeper's `blur` output when it still had that signal, so no separate timing.
 
 Why it is here: to show the floor of a sharpness-only cleaner. It gets 39%, worse than always
 answering `delete` (60%), because screenshots and scanned documents are the sharpest images in any
-library. Blur is one of our six signals and carries 3% of the weight for exactly this reason.
+library. PhotoKeeper carried this as a sixth signal at 3% weight and dropped it for the same
+reason: on this data it moves nothing. It would only earn its place with a labelled blurry-photo
+class in the dataset.
 Rosebrock's own follow-up notes the method "required significant manual tuning" and proposes an
 FFT measure instead; neither fixes the screenshot problem, which is about content, not focus.
 
