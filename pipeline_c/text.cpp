@@ -1,17 +1,11 @@
-#include <cmath>
 #include <mutex>
 
 #include <opencv2/dnn.hpp>
+#include <opencv2/imgproc.hpp>  // shortcut: OpenCV 4 header; OpenCV 5 moved contourArea to <opencv2/geometry.hpp>
 
 #include "pipeline.h"
 
 namespace pk {
-
-static double polygon_area(const std::vector<cv::Point>& pts) {  // shoelace; contourArea lives in different headers across OpenCV 4/5
-    double s = 0;
-    for (size_t i = 0; i < pts.size(); ++i) s += pts[i].cross(pts[(i + 1) % pts.size()]);
-    return std::abs(s) / 2;
-}
 
 // Fraction of the image covered by detected text boxes.
 double text_area_ratio(const cv::Mat& bgr) {
@@ -28,7 +22,7 @@ double text_area_ratio(const cv::Mat& bgr) {
         det.detect(bgr, quads);
     }
     double area = 0;
-    for (const auto& q : quads) area += polygon_area(q);
+    for (const auto& q : quads) area += cv::contourArea(q);
     return area / double(bgr.total());
 }
 

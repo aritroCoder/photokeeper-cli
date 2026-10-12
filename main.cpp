@@ -49,8 +49,8 @@ struct PriorityQueue {
 
 struct Task {
     size_t image;
-    int stage;  // 0 decodes paths[image]; k >= 1 runs SIGNALS[k - 1] on the decoded thumbnail
-    std::function<double()> job;
+    int stage;  // 0 decodes paths[image]; k >= 1 runs SIGNALS[k - 1] on the decoded thumbnail below
+    cv::Mat bgr, gray;
     bool operator>(const Task& o) const { return std::tie(image, stage) > std::tie(o.image, o.stage); }
 };
 
@@ -89,11 +89,11 @@ static void analyze_all(const std::vector<std::string>& paths, int workers,
                     continue;
                 }
                 cv::cvtColor(bgr, gray, cv::COLOR_BGR2GRAY);
-                for (int k = 0; k < pk::N; ++k) tasks.push({t.image, k + 1, [=] { return pk::SIGNALS[k](bgr, gray); }});
+                for (int k = 1; k <= pk::N; ++k) tasks.push({t.image, k, bgr, gray});
             } else {
                 double value;
                 try {
-                    value = t.job();
+                    value = pk::SIGNALS[t.stage - 1](t.bgr, t.gray);
                 } catch (const cv::Exception&) {  // OpenCV rejected the pixels
                     value = NAN;
                 }
@@ -141,18 +141,15 @@ static void run_eval(const std::string& manifest, int workers) {
     }
     std::vector<std::string> paths;
     for (const auto& r : rows) paths.push_back((root / r[0]).string());
-    std::vector<std::string> predicted(rows.size());
-    analyze_all(paths, workers, [&](size_t i, std::optional<pk::Features> f) {
-        predicted[i] = f && pk::keep(*f) ? "keep" : "delete";
-    });
     std::map<std::pair<std::string, std::string>, int> matrix;
     std::map<std::string, std::pair<int, int>> by_source;  // hits, total
-    for (size_t i = 0; i < rows.size(); ++i) {
+    analyze_all(paths, workers, [&](size_t i, std::optional<pk::Features> f) {
         const auto& [path, label, source] = rows[i];
-        matrix[{label, predicted[i]}]++;
-        by_source[source].first += label == predicted[i];
+        std::string predicted = f && pk::keep(*f) ? "keep" : "delete";
+        matrix[{label, predicted}]++;
+        by_source[source].first += label == predicted;
         by_source[source].second++;
-    }
+    });
     std::printf("%20s %6s %7s\n", "actual \\ predicted", "keep", "delete");
     for (const char* actual : {"keep", "delete"})
         std::printf("%20s %6d %7d\n", actual, matrix[{actual, "keep"}], matrix[{actual, "delete"}]);
