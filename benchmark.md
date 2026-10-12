@@ -25,6 +25,29 @@ Machine: WSL2 on Linux, 24 logical cores, 7 GB RAM. Measured 2026-10-12 with `/u
 Positive class for precision/recall/F1 is `delete`, so a false positive is a keeper wrongly
 deleted. Confusion order: keep→keep, keep→delete, delete→keep, delete→delete.
 
+### What "peak RSS" measures
+
+Peak resident memory of the whole process over the full 1000-image run, as reported by
+`/usr/bin/time %M`. No candidate loads the dataset into memory; images stream through, so the peak
+is models plus however many decoded images are in flight at once (PhotoKeeper: one 320 px
+thumbnail per worker, 8 workers; CLIP: a batch of 32 at 224 px; Czkawka: one image per thread,
+24 threads). Peak is the right number for "will it fit on the device", but it scales with
+parallelism, so here is the same measurement for a single image, which is what the app will do
+when the user opens one photo:
+
+| | PhotoKeeper | CLIP ViT-B/32 | Czkawka |
+|---|---|---|---|
+| process start, no images (models loaded) | 66 MB | | |
+| 1 image | **117 MB** | 915 MB | 33 MB |
+| 1000 images, 1 worker | 123 MB | | |
+| 1000 images, parallel (table above) | 248 MB (8 workers) | 1895 MB (batch 32) | 589 MB (24 threads) |
+
+For PhotoKeeper the floor is the two detectors (~50 MB once both have run) on top of a ~66 MB
+process; each extra worker adds ~16 MB. These are peaks, not averages: RSS does not shrink
+between images, so the average over a run is within a few MB of the peak. Single-image RSS was
+measured in a later session than the table; memory is not affected by machine load, timings are,
+so the timing columns were not re-taken.
+
 ## The dataset
 
 `dataset/manifest.csv` labels each image `keep` or `delete` by source: Rico (Android screenshots)
