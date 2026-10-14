@@ -24,19 +24,19 @@ Machine: WSL2 on Linux, 24 logical cores, 7 GB RAM. Measured with `/usr/bin/time
 
 Benchmark data: Labelled eval set with 1000 images: 400 keep, 600 delete. This eval set is provided seperately.
 
-| | PhotoKeeper (C++) | CLIP ViT-B/32 zero-shot | Czkawka 12.0.2 `image` | Blur-only threshold |
-|---|---|---|---|---|
-| total time | **10.5 s** | 51.3 s | 1.5 s | (same run as ours) |
-| ms / img | **10.5** | 51.3 | 1.5 | |
-| peak RSS | **242 MB** | 1895 MB | 589 MB | |
-| accuracy | **0.934** | 0.916 | n/a | 0.389 |
-| F1 (delete) | **0.945** | 0.930 | n/a | 0.035 |
-| F1 (keep) | **0.917** | 0.896 | n/a | 0.553 |
-| macro F1 | **0.931** | 0.913 | n/a | 0.294 |
-| precision / recall (delete) | 0.942 / 0.948 | 0.934 / 0.925 | n/a | 0.333 / 0.018 |
-| model size on disk | 2.6 MB | ~600 MB | 0 | 0 |
+| | PhotoKeeper (C++) | PhotoKeeper (Python) | CLIP ViT-B/32 zero-shot | Czkawka 12.0.2 `image` | Blur-only threshold |
+|---|---|---|---|---|---|
+| total time | **10.5 s** | 12.5 s | 51.3 s | 1.5 s | (same run as ours) |
+| ms / img | **10.5** | 12.5 | 51.3 | 1.5 | |
+| peak RSS | **242 MB** | 212 MB | 1895 MB | 589 MB | |
+| accuracy | **0.934** | **0.934** | 0.916 | n/a | 0.389 |
+| F1 (delete) | **0.945** | **0.945** | 0.930 | n/a | 0.035 |
+| F1 (keep) | **0.917** | **0.917** | 0.896 | n/a | 0.553 |
+| macro F1 | **0.931** | **0.931** | 0.913 | n/a | 0.294 |
+| precision / recall (delete) | 0.942 / 0.948 | 0.942 / 0.948 | 0.934 / 0.925 | n/a | 0.333 / 0.018 |
+| model size on disk | 2.6 MB | 2.6 MB | ~600 MB | 0 | 0 |
 
-Note: Positive class for precision/recall/F1 is `delete`, so a false positive is a keeper wrongly deleted.
+Note: Positive class for precision/recall/F1 is `delete`, so a false positive is a keeper wrongly deleted. The memory difference between C++ and python does not favour C++ because it uses the ubuntu system opencv with all features involved unlike python which uses wheel built opencv.  
 
 ### CLIP ViT-B/32, zero-shot
 
