@@ -198,13 +198,12 @@ above, batch 32), `score.py` (metrics from a `path verdict` file), `czkawka_cli`
 12.0.2 GitHub release, and the `*_pred.txt` / `*_time.txt` outputs behind the table. PhotoKeeper's
 predictions come from `./build/photokeeper -j 8 dataset`, scored with the same `score.py`.
 
-The OpenCV behind the C++ numbers is 4.10.0 from the source tarball, configured with
-`-DBUILD_SHARED_LIBS=OFF -DBUILD_LIST=core,imgproc,imgcodecs,dnn,objdetect -DWITH_TBB=OFF
--DWITH_OPENMP=OFF -DWITH_IPP=OFF -DWITH_OPENCL=OFF -DBUILD_JPEG=ON -DBUILD_PNG=ON -DBUILD_TIFF=ON
--DBUILD_ZLIB=ON -DBUILD_PROTOBUF=ON` and every other `WITH_*` codec and backend off, then
-`cmake -S . -B build -DOpenCV_DIR=<install>/lib/cmake/opencv4`. The result links six system
-libraries (libc, libstdc++ and friends) against 180 for Ubuntu's `libopencv-dev`, and it is the
-configuration the mobile builds will use anyway.
+The OpenCV behind the C++ numbers is what `cmake -S . -B build && cmake --build build` produces:
+`CMakeLists.txt` fetches the 4.10.0 source tarball and builds it into the tree, static, pthreads,
+`BUILD_LIST=core,imgproc,imgcodecs,dnn,objdetect`, bundled libjpeg-turbo/libpng/libtiff/protobuf,
+every other `WITH_*` codec and backend off. The result links six system libraries (libc,
+libstdc++ and friends) against 180 for Ubuntu's `libopencv-dev`, and it is the configuration the
+mobile builds will use anyway.
 
 Pinned versions: OpenCV 4.10.0 (source build above), Python 3.12 with
 `opencv-python-headless` 5.0.0, Czkawka 12.0.2, `openai/clip-vit-base-patch32`,
