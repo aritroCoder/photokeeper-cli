@@ -5,15 +5,16 @@ eval set in `dataset/` (1000 images: 400 keep, 600 delete). One table, then what
 actually does, so the comparison is read for what it is.
 
 Machine: WSL2 on Linux, 24 logical cores, 7 GB RAM. Measured 2026-10-12 with `/usr/bin/time`
-(wall, user CPU, peak RSS of the whole process, model load included). OpenCV 4.10.0.
+(wall, user CPU, peak RSS of the whole process, model load included). OpenCV 4.10.0, built from
+source for PhotoKeeper (static, pthreads, only the five modules it uses; see Reproducing).
 
 | | PhotoKeeper (C++) | PhotoKeeper (Python) | CLIP ViT-B/32 zero-shot | Czkawka 12.0.2 `image` | Blur-only threshold |
 |---|---|---|---|---|---|
-| total time | **10.5 s** | 12.5 s | 51.3 s | 1.5 s | (same run as ours) |
-| ms / img | **10.5** | 12.5 | 51.3 | 1.5 | |
-| peak RSS | **242 MB** | 212 MB | 1895 MB | 589 MB | |
-| CPU time | 158 s | 96 s | 277 s | 26 s | |
-| threads | 8 workers + OpenCV TBB | 8 workers + OpenCV pthreads | 12 (torch default) | 24 | |
+| total time | **9.5 s** | 12.5 s | 51.3 s | 1.5 s | (same run as ours) |
+| ms / img | **9.5** | 12.5 | 51.3 | 1.5 | |
+| peak RSS | **171 MB** | 212 MB | 1895 MB | 589 MB | |
+| CPU time | 105 s | 96 s | 277 s | 26 s | |
+| threads | 8 workers + OpenCV pthreads | 8 workers + OpenCV pthreads | 12 (torch default) | 24 | |
 | accuracy | **0.934** | **0.934** | 0.916 | n/a | 0.389 |
 | F1 (delete) | **0.945** | **0.945** | 0.930 | n/a | 0.035 |
 | F1 (keep) | **0.917** | **0.917** | 0.896 | n/a | 0.553 |
@@ -25,10 +26,11 @@ Machine: WSL2 on Linux, 24 logical cores, 7 GB RAM. Measured 2026-10-12 with `/u
 Positive class for precision/recall/F1 is `delete`, so a false positive is a keeper wrongly
 deleted. Confusion order: keep→keep, keep→delete, delete→keep, delete→delete.
 
-The Python column was measured in a later session (2026-10-14) in which the C++ binary, run
-back to back on the same command, took 11.8 s / 156 s CPU / 235 MB; so read Python as ~5% slower
-wall-clock than C++ with the same memory, and do not compare its timing to the other columns
-directly.
+The two PhotoKeeper columns were measured back to back in a later session (2026-10-14), so they
+compare to each other but not directly to the other columns' timings. In that same session the
+C++ binary linked against Ubuntu's `libopencv-dev` (shared, TBB, every module and codec enabled)
+took 11.8 s / 156 s CPU / 235 MB, slower and larger than Python; the OpenCV build, not the
+language, is what moves these numbers.
 
 ### What "peak RSS" measures
 
@@ -42,19 +44,19 @@ when the user opens one photo:
 
 | | PhotoKeeper (C++) | PhotoKeeper (Python) | CLIP ViT-B/32 | Czkawka |
 |---|---|---|---|---|
-| process start, no images (models loaded) | 66 MB | 71 MB | 542 MB | 11 MB |
-| 1 image | **117 MB** | 103 MB | 915 MB | 33 MB |
-| 1000 images, one in flight | 123 MB (1 worker) | 117 MB (1 worker) | 972 MB (batch 1) | 44 MB (1 thread) |
-| 1000 images, parallel (table above) | 248 MB (8 workers) | 212 MB (8 workers) | 1895 MB (batch 32) | 589 MB (24 threads) |
+| process start, no images (models loaded) | **8.5 MB** | 71 MB | 542 MB | 11 MB |
+| 1 image | **51 MB** | 103 MB | 915 MB | 33 MB |
+| 1000 images, one in flight | **59 MB** (1 worker) | 117 MB (1 worker) | 972 MB (batch 1) | 44 MB (1 thread) |
+| 1000 images, parallel (table above) | **171 MB** (8 workers) | 212 MB (8 workers) | 1895 MB (batch 32) | 589 MB (24 threads) |
 
-For PhotoKeeper the floor is the two detectors (~50 MB once both have run) on top of a ~66 MB
+For PhotoKeeper the floor is the two detectors (~42 MB once both have run) on top of an 8.5 MB
 process; each extra worker adds ~16 MB. CLIP's floor is the model (542 MB before any image), and
 one image adds ~370 MB of activations. Czkawka has no model; its memory is almost entirely
 per-thread decode buffers, which is why it is the smallest at one thread and the second largest
 at 24. These are peaks, not averages: RSS does not shrink between images, so the average over a
 run is within a few MB of the peak. The one-in-flight runs also give the serial speed: PhotoKeeper
-36 s, CLIP 76 s, Czkawka 11 s for 1000 images (same later session, so not comparable to the main
-table's timings, which were taken on an idle host; memory is unaffected by load).
+18 s (C++) and 22 s (Python) in the 10-14 session, CLIP 76 s and Czkawka 11 s in a loaded earlier
+session, so not comparable to the main table's idle-host timings; memory is unaffected by load.
 
 ## The dataset
 
@@ -77,8 +79,7 @@ face count (YuNet, 233 KB ONNX), palette flatness, axis-aligned edge ratio, clip
 fraction, and text area ratio (PP-OCRv3 DB detector, 2.4 MB ONNX). A weighted sum with hand-set
 ramps decides. Everything runs on-device through OpenCV; see `pipeline_c/`. An earlier sixth
 signal, variance-of-Laplacian blur at 3% weight, was removed after measuring that dropping it
-left the eval unchanged (0.933 → 0.934); the timing and memory rows were taken with it still in
-and are at most ~0.1 ms/img pessimistic.
+left the eval unchanged (0.933 → 0.934).
 
 What it does not do: find duplicates or near-duplicates, group bursts, rate aesthetics, or
 understand content beyond "has faces" and "has text". A sharp, well-exposed photo of nothing
@@ -90,15 +91,15 @@ Run: `./build/photokeeper -j 8 dataset` (the scored output) or `./build/photokee
 
 What it is: the original implementation on the `main` branch (`main.py`, `pipeline/`), which the
 C++ port follows line for line: same models, same signals, ramps and weights, same priority-queue
-scheduler. It runs on the `opencv-python-headless` 5.0.0 wheel instead of Ubuntu's OpenCV 4.10.
+scheduler. It runs on the `opencv-python-headless` 5.0.0 wheel, itself a static minimal OpenCV.
 
 Why it is here: to show what the port bought. Verdicts agree on all 1000 images and four of the
 five signals match to 1e-6; `text_area_ratio` differs by up to 0.03 on a few scanned documents,
-which is the OpenCV 5 vs 4 DNN path, not the code. Wall-clock is within ~5% of C++ because every
-heavy call (decode, resize, Sobel, both detectors) runs inside OpenCV with the GIL released, so
-Python is only glue. Its lower CPU time comes from the wheel's pthreads pool, which oversubscribes
-24 cores less than the TBB build does with 8 workers. The port's value is the deployment story
-(one native library for Flutter on four platforms, no interpreter), not speed.
+which is the OpenCV 5 vs 4 DNN path, not the code. Python is only ~30% slower because every heavy
+call (decode, resize, Sobel, both detectors) runs inside OpenCV with the GIL released, so Python is
+glue. Its memory gap is the interpreter and numpy: 71 MB before the first image against 8.5 MB for
+the static C++ binary. The port's main value is still the deployment story (one native library for
+Flutter on four platforms, no interpreter).
 
 Run: `uv run main.py -j 8 dataset` or `uv run main.py --eval` on `main`.
 
@@ -197,6 +198,14 @@ above, batch 32), `score.py` (metrics from a `path verdict` file), `czkawka_cli`
 12.0.2 GitHub release, and the `*_pred.txt` / `*_time.txt` outputs behind the table. PhotoKeeper's
 predictions come from `./build/photokeeper -j 8 dataset`, scored with the same `score.py`.
 
-Pinned versions: OpenCV 4.10.0 (Ubuntu `libopencv-dev`), Python 3.12 with
+The OpenCV behind the C++ numbers is 4.10.0 from the source tarball, configured with
+`-DBUILD_SHARED_LIBS=OFF -DBUILD_LIST=core,imgproc,imgcodecs,dnn,objdetect -DWITH_TBB=OFF
+-DWITH_OPENMP=OFF -DWITH_IPP=OFF -DWITH_OPENCL=OFF -DBUILD_JPEG=ON -DBUILD_PNG=ON -DBUILD_TIFF=ON
+-DBUILD_ZLIB=ON -DBUILD_PROTOBUF=ON` and every other `WITH_*` codec and backend off, then
+`cmake -S . -B build -DOpenCV_DIR=<install>/lib/cmake/opencv4`. The result links six system
+libraries (libc, libstdc++ and friends) against 180 for Ubuntu's `libopencv-dev`, and it is the
+configuration the mobile builds will use anyway.
+
+Pinned versions: OpenCV 4.10.0 (source build above), Python 3.12 with
 `opencv-python-headless` 5.0.0, Czkawka 12.0.2, `openai/clip-vit-base-patch32`,
 transformers 5.19.0, torch 2.14.1+cpu.
