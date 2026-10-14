@@ -15,7 +15,7 @@ Then run the cli:
 ```
 ./build/photokeeper album/             # classify all the images in the given folder (searched recursively)
 ./build/photokeeper photo.jpg          # classify a single image as keep or delete
-./build/photokeeper --eval             # accuracy on dataset/manifest.csv (if present, not committed with code)
+./build/photokeeper --eval             # accuracy on dataset/manifest.csv (see Benchmark data below to fetch the images)
 ./build/photokeeper -h                 # show help
 ```
 
@@ -24,7 +24,12 @@ Photokeeper is designed for edge devices, which means it should be able to run o
 
 Machine: WSL2 on Linux, 24 logical cores, 7 GB RAM. Measured with `/usr/bin/time` (wall, user CPU, peak RSS of the whole process, model load included). OpenCV 4.10.0.
 
-Benchmark data: Labelled eval set with 1000 images: 400 keep, 600 delete. This eval set is provided seperately.
+Benchmark data: Labelled eval set with 1000 images: 400 keep, 600 delete. The images themselves are not in this repo because their sources (Hateful Memes, Unsplash Lite, Flickr30k) do not allow redistribution; what is committed is `dataset/manifest.csv`, which lists each image's label and exact source location, plus a script that fetches them. To rebuild the set and run the eval (needs [uv](https://docs.astral.sh/uv/), downloads ~700 MB, about 10 minutes):
+```
+uv run dataset/fetch.py
+./build/photokeeper --eval
+```
+Each image is downloaded from its original source under that source's terms (Rico, RVL-CDIP, Hateful Memes and Flickr30k via their Hugging Face datasets, Unsplash from the Unsplash CDN), so check those terms match your use.
 
 | | PhotoKeeper (C++) | PhotoKeeper (Python) | CLIP ViT-B/32 zero-shot | Czkawka 12.0.2 `image` | Blur-only threshold |
 |---|---|---|---|---|---|

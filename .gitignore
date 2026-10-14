@@ -1,4 +1,6 @@
 eval_data/
 build/
-dataset/
+dataset/*
+!dataset/manifest.csv
+!dataset/fetch.py
 __pycache__/
