@@ -5,10 +5,12 @@ Photokeeper is a CLI tool that can take one or many images (ideally from your ga
 This version of photokeeper is written in C++. A python version is also available in the other branch.
 
 ## Build and run locally
-First you need to clone the repo. Once the repo is cloned, get into the repo and run (make sure build-essentials is installed in linux/mac, for windows I recommend using WSL and follow linux steps)
+First you need to clone the repo. Once the repo is cloned, get into the repo and run (make sure build-essentials and cmake ≥ 3.24 are installed in linux/mac, for windows I recommend using WSL and follow linux steps)
 ```
-cmake --build build 
+cmake -B build
+cmake --build build -j4
 ```
+No OpenCV install is needed: the first configure downloads the OpenCV 4.10.0 source (95 MB) and the first build compiles it statically with only the five modules we use, which takes a few minutes. Rebuilds after that only recompile PhotoKeeper.
 Then run the cli:
 ```
 ./build/photokeeper album/             # classify all the images in the given folder (searched recursively)
@@ -18,7 +20,7 @@ Then run the cli:
 ```
 
 ## Performance
-Photokeeper is designed for edge devices, which means it should be able to run on a 5 year old android phone as well as a brand new desktop setup. So performance is extremely important for this case. Although there is no perfect one on one open/close source alternatives that match with this cli, we still picked the closest ones to match with CLIP ViT, Czkawka, and blur threshhold. The candidates are discussed in detail below. The results are:
+Photokeeper is designed for edge devices, which means it should be able to run on a 5 year old android phone as well as a brand new desktop setup. So performance is extremely important for this case. Although there is no perfect one on one open/closed source alternatives that match with this cli, we still picked the closest ones to match with CLIP ViT, Czkawka, and blur threshhold. The candidates are discussed in detail below. The results are:
 
 Machine: WSL2 on Linux, 24 logical cores, 7 GB RAM. Measured with `/usr/bin/time` (wall, user CPU, peak RSS of the whole process, model load included). OpenCV 4.10.0.
 
@@ -26,9 +28,9 @@ Benchmark data: Labelled eval set with 1000 images: 400 keep, 600 delete. This e
 
 | | PhotoKeeper (C++) | PhotoKeeper (Python) | CLIP ViT-B/32 zero-shot | Czkawka 12.0.2 `image` | Blur-only threshold |
 |---|---|---|---|---|---|
-| total time | **10.5 s** | 12.5 s | 51.3 s | 1.5 s | (same run as ours) |
-| ms / img | **10.5** | 12.5 | 51.3 | 1.5 | |
-| peak RSS | **242 MB** | 212 MB | 1895 MB | 589 MB | |
+| total time | **9.5 s** | 12.5 s | 51.3 s | 1.5 s | (same run as ours) |
+| ms / img | **9.5** | 12.5 | 51.3 | 1.5 | |
+| peak RSS | **171 MB** | 212 MB | 1895 MB | 589 MB | |
 | accuracy | **0.934** | **0.934** | 0.916 | n/a | 0.389 |
 | F1 (delete) | **0.945** | **0.945** | 0.930 | n/a | 0.035 |
 | F1 (keep) | **0.917** | **0.917** | 0.896 | n/a | 0.553 |
@@ -36,7 +38,7 @@ Benchmark data: Labelled eval set with 1000 images: 400 keep, 600 delete. This e
 | precision / recall (delete) | 0.942 / 0.948 | 0.942 / 0.948 | 0.934 / 0.925 | n/a | 0.333 / 0.018 |
 | model size on disk | 2.6 MB | 2.6 MB | ~600 MB | 0 | 0 |
 
-Note: Positive class for precision/recall/F1 is `delete`, so a false positive is a keeper wrongly deleted. The memory difference between C++ and python does not favour C++ because it uses the ubuntu system opencv with all features involved unlike python which uses wheel built opencv.  
+Note: Positive class for precision/recall/F1 is `delete`, so a false positive is a keeper wrongly deleted. 
 
 ### CLIP ViT-B/32, zero-shot
 
