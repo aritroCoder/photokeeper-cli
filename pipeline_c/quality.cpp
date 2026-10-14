@@ -4,7 +4,7 @@
 
 namespace pk {
 
-// Fraction of near-black or near-white pixels, high means pocket shot or blown out.
+// Fraction of near-black or near-white pixels, high means scanned documents or screenshots.
 double clipped(const cv::Mat& gray) {
     cv::Mat mid;
     cv::inRange(gray, cv::Scalar(8), cv::Scalar(247), mid);
