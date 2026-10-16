@@ -11,6 +11,7 @@
 #include <opencv2/imgproc.hpp>
 
 #include "../pipeline_c/pipeline.h"
+#include "../pipeline_c/pk.h"
 
 int main() {
     cv::theRNG() = cv::RNG(0);
@@ -43,6 +44,15 @@ int main() {
             cv::Mat loaded = pk::load(path);
             assert(std::max(loaded.rows, loaded.cols) == pk::SIDE);
         }
+
+    // C ABI agrees with the C++ one on both entry points and reports undecodable input
+    double f[PK_N];
+    cv::imwrite(dir + "/photo.jpg", photo);
+    assert(pk_analyze_path((dir + "/photo.jpg").c_str(), f) == 0 && pk_keep(f));
+    std::vector<unsigned char> png;
+    cv::imencode(".png", screenshot, png);
+    assert(pk_analyze_encoded(png.data(), png.size(), f) == 0 && !pk_keep(f));
+    assert(pk_analyze_path((dir + "/missing.jpg").c_str(), f) == -1 && pk_analyze_encoded(png.data(), 3, f) == -1);
     std::filesystem::remove_all(dir);
 
     pk::Features shot = pk::analyze(screenshot);

@@ -33,19 +33,25 @@ find_package(Threads REQUIRED)
 
 add_library(pipeline pipeline_c/pipeline.cpp pipeline_c/load.cpp pipeline_c/edges.cpp pipeline_c/faces.cpp
                      pipeline_c/palette.cpp pipeline_c/quality.cpp pipeline_c/text.cpp)
-target_include_directories(pipeline PUBLIC ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR})  # build dir: opencv_modules.hpp
+# pipeline_c/pk.cpp (the C ABI) is deliberately not in `pipeline`: an app compiles it into its own shared library,
+# otherwise the linker drops the unreferenced exports.
+target_include_directories(pipeline PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_BINARY_DIR})  # build dir: opencv_modules.hpp
 foreach(m ${OPENCV_MODULES})
   target_link_libraries(pipeline PUBLIC opencv_${m})
   target_include_directories(pipeline PUBLIC ${opencv_SOURCE_DIR}/modules/${m}/include)  # OpenCV keeps these PRIVATE
 endforeach()
 target_link_libraries(pipeline PUBLIC Threads::Threads)
-# shortcut: model dir baked in at build time, swap for an init(models_dir) when the core ships inside an app
-target_compile_definitions(pipeline PRIVATE PK_MODELS="${CMAKE_SOURCE_DIR}/models")
+# default model dir for the CLI; apps override it with pk_init()
+target_compile_definitions(pipeline PRIVATE PK_MODELS="${CMAKE_CURRENT_SOURCE_DIR}/models")
+
+if(NOT PROJECT_IS_TOP_LEVEL)
+  return()  # an app embedding the library (add_subdirectory / FetchContent) only wants `pipeline`
+endif()
 
 add_executable(photokeeper main.cpp)
 target_link_libraries(photokeeper pipeline)
 
-add_executable(test_pipeline tests/test_pipeline.cpp)
+add_executable(test_pipeline tests/test_pipeline.cpp pipeline_c/pk.cpp)
 target_link_libraries(test_pipeline pipeline)
 # OpenCV's CMake redirects executables to bin/; keep ours at build/photokeeper
 set_target_properties(photokeeper test_pipeline PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})

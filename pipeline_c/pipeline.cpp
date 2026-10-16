@@ -8,6 +8,7 @@
 namespace pk {
 
 const char* const SIGNAL_NAMES[N] = {"faces", "palette_flatness", "axis_edge_ratio", "clipped", "text_area_ratio"};
+std::string MODELS = PK_MODELS;
 
 const Signal SIGNALS[N] = {
     [](const cv::Mat& bgr, const cv::Mat&) { return double(faces(bgr)); },

@@ -10,6 +10,7 @@ constexpr int SIDE = 320;  // long edge of the working thumbnail; every signal r
 constexpr int N = 5;
 extern const char* const SIGNAL_NAMES[N];
 using Features = std::array<double, N>;  // in SIGNAL_NAMES order; NaN marks a signal that threw
+extern std::string MODELS;  // directory of the two ONNX files; set before the first detector call (see pk.h)
 
 // Signals. bgr is 8-bit BGR, gray its single-channel version. The two detectors are shared behind locks.
 int faces(const cv::Mat& bgr);
