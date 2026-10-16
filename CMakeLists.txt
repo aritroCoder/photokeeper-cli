@@ -28,7 +28,8 @@ include(FetchContent)
 FetchContent_Declare(opencv
   URL https://github.com/opencv/opencv/archive/refs/tags/4.10.0.tar.gz
   URL_HASH SHA256=b2171af5be6b26f7a06b1229948bbb2bdaa74fcf5cd097e0af6378fce50a6eb9
-  DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+  PATCH_COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/win_temppath.cmake)
 FetchContent_MakeAvailable(opencv)
 find_package(Threads REQUIRED)
 
