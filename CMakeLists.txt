@@ -30,7 +30,9 @@ FetchContent_Declare(opencv
   URL_HASH SHA256=b2171af5be6b26f7a06b1229948bbb2bdaa74fcf5cd097e0af6378fce50a6eb9
   DOWNLOAD_EXTRACT_TIMESTAMP TRUE
   PATCH_COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/win_temppath.cmake)
+set(CMAKE_SKIP_INSTALL_RULES TRUE)  # Flutter builds the INSTALL target; OpenCV's rules write to Program Files and fail
 FetchContent_MakeAvailable(opencv)
+set(CMAKE_SKIP_INSTALL_RULES FALSE)
 find_package(Threads REQUIRED)
 
 add_library(pipeline pipeline_c/pipeline.cpp pipeline_c/load.cpp pipeline_c/edges.cpp pipeline_c/faces.cpp
