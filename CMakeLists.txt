@@ -4,7 +4,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)  # clangd (Zed, VS Code) reads build/compile_commands.json
 if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Release)
+  set(CMAKE_BUILD_TYPE Release CACHE STRING "" FORCE)  # cache, not plain: OpenCV sets properties on it (fails on MSVC)
 endif()
 
 # OpenCV is built from source into this tree: static, pthreads, only the modules used, bundled codecs.
@@ -20,7 +20,7 @@ foreach(opt WITH_TBB WITH_OPENMP WITH_IPP WITH_OPENCL WITH_ITT WITH_EIGEN WITH_L
             WITH_GSTREAMER WITH_1394 WITH_VA WITH_VA_INTEL WITH_ADE WITH_QUIRC WITH_VTK WITH_GDAL WITH_GPHOTO2
             WITH_OPENEXR WITH_JASPER WITH_OPENJPEG WITH_WEBP WITH_IMGCODEC_HDR WITH_IMGCODEC_SUNRASTER
             WITH_IMGCODEC_PXM WITH_IMGCODEC_PFM BUILD_TESTS BUILD_PERF_TESTS BUILD_EXAMPLES BUILD_opencv_apps
-            BUILD_opencv_python3 BUILD_JAVA BUILD_DOCS OPENCV_GENERATE_PKGCONFIG
+            BUILD_opencv_python3 BUILD_JAVA BUILD_DOCS OPENCV_GENERATE_PKGCONFIG BUILD_ANDROID_PROJECTS BUILD_ANDROID_EXAMPLES
             BUILD_WITH_STATIC_CRT)  # MSVC: link the same dynamic CRT (/MD) as everything else, Flutter included
   set(${opt} OFF CACHE BOOL "" FORCE)
 endforeach()
