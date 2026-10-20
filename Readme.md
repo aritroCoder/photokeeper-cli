@@ -36,14 +36,14 @@ Each image is downloaded from its original source under that source's terms (Ric
 | total time | **9.5 s** | 12.5 s | 51.3 s | 1.5 s | (same run as ours) |
 | ms / img | **9.5** | 12.5 | 51.3 | 1.5 | |
 | peak RSS | **171 MB** | 212 MB | 1895 MB | 589 MB | |
-| accuracy | 0.904 | **0.934** | 0.916 | n/a | 0.389 |
-| F1 (delete) | 0.925 | **0.945** | 0.930 | n/a | 0.035 |
-| F1 (keep) | 0.868 | **0.917** | 0.896 | n/a | 0.553 |
-| macro F1 | 0.896 | **0.931** | 0.913 | n/a | 0.294 |
-| precision / recall (delete) | 0.875 / **0.980** | 0.942 / 0.948 | 0.934 / 0.925 | n/a | 0.333 / 0.018 |
+| accuracy | 0.904 | 0.904 | **0.916** | n/a | 0.389 |
+| F1 (delete) | 0.925 | 0.925 | **0.930** | n/a | 0.035 |
+| F1 (keep) | 0.868 | 0.868 | **0.896** | n/a | 0.553 |
+| macro F1 | 0.896 | 0.896 | **0.913** | n/a | 0.294 |
+| precision / recall (delete) | 0.875 / **0.980** | 0.875 / **0.980** | 0.934 / 0.925 | n/a | 0.333 / 0.018 |
 | model size on disk | 2.6 MB | 2.6 MB | ~600 MB | 0 | 0 |
 
-Note: Positive class for precision/recall/F1 is `delete`, so a false positive is a keeper wrongly deleted. The C++ version is tuned for delete recall (a missed screenshot stays in the gallery, a flagged keeper gets unticked on the review screen); the Python version keeps the accuracy-tuned weights. 
+Note: Positive class for precision/recall/F1 is `delete`, so a false positive is a keeper wrongly deleted. Both versions are tuned for delete recall (a missed screenshot stays in the gallery, a flagged keeper gets unticked on the review screen); at the earlier accuracy-tuned weights they scored 0.934 accuracy, 0.942 / 0.948 precision / recall. 
 
 ### CLIP ViT-B/32, zero-shot
 

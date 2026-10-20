@@ -59,6 +59,9 @@ int main() {
     assert(pk::keep(pk::analyze(photo)) && !pk::keep(shot));
     shot[4] = NAN;  // a failed signal (text) is neutral, the rest still says delete
     assert(!pk::keep(shot));
+    pk::Features edgy = pk::analyze(photo);
+    edgy[2] = 0.7;  // screenshot-like edges force delete whatever the score
+    assert(!pk::keep(edgy));
 
     // detectors are per thread: concurrent calls agree with the serial verdicts
     std::vector<std::thread> threads;
