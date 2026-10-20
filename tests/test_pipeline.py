@@ -41,6 +41,7 @@ with tempfile.TemporaryDirectory() as d:
     assert isinstance(results[paths[-1]], Exception)
     assert [classify_image_features(results[p]) for p in paths[:2]] == ["keep", "delete"]
     assert classify_image_features({**results[paths[1]], "text_area_ratio": ValueError()}) == "delete"
+    assert classify_image_features({**results[paths[0]], "axis_edge_ratio": 0.7}) == "delete"  # edges force delete
 
     # a failing signal yields its error in place and never swallows another image's result
     real = text.area_ratio
