@@ -36,14 +36,14 @@ Each image is downloaded from its original source under that source's terms (Ric
 | total time | **9.5 s** | 12.5 s | 51.3 s | 1.5 s | (same run as ours) |
 | ms / img | **9.5** | 12.5 | 51.3 | 1.5 | |
 | peak RSS | **171 MB** | 212 MB | 1895 MB | 589 MB | |
-| accuracy | **0.934** | **0.934** | 0.916 | n/a | 0.389 |
-| F1 (delete) | **0.945** | **0.945** | 0.930 | n/a | 0.035 |
-| F1 (keep) | **0.917** | **0.917** | 0.896 | n/a | 0.553 |
-| macro F1 | **0.931** | **0.931** | 0.913 | n/a | 0.294 |
-| precision / recall (delete) | 0.942 / 0.948 | 0.942 / 0.948 | 0.934 / 0.925 | n/a | 0.333 / 0.018 |
+| accuracy | 0.904 | **0.934** | 0.916 | n/a | 0.389 |
+| F1 (delete) | 0.925 | **0.945** | 0.930 | n/a | 0.035 |
+| F1 (keep) | 0.868 | **0.917** | 0.896 | n/a | 0.553 |
+| macro F1 | 0.896 | **0.931** | 0.913 | n/a | 0.294 |
+| precision / recall (delete) | 0.875 / **0.980** | 0.942 / 0.948 | 0.934 / 0.925 | n/a | 0.333 / 0.018 |
 | model size on disk | 2.6 MB | 2.6 MB | ~600 MB | 0 | 0 |
 
-Note: Positive class for precision/recall/F1 is `delete`, so a false positive is a keeper wrongly deleted. 
+Note: Positive class for precision/recall/F1 is `delete`, so a false positive is a keeper wrongly deleted. The C++ version is tuned for delete recall (a missed screenshot stays in the gallery, a flagged keeper gets unticked on the review screen); the Python version keeps the accuracy-tuned weights. 
 
 ### CLIP ViT-B/32, zero-shot
 
@@ -141,4 +141,4 @@ Instead of a single classifier, photokeeper uses a series of pipeline steps, whe
 4. **Extreme-tone ratio**: Fraction of near-black or near-white pixels, high means scanned documents or screenshots.
 5. **Text area ratio**: Uses the PP-OCRv3 model which is super lightweight and ultrafast to detect the presence of text in the image. Then it calculates the ratio of image area with text area (from detected bounding box coordinates). This only works on English text for now.
 
-Its uses a weighted vote to combine each of these pipeline step outputs. Each signal is turned into a keep-likeness score between 0 and 1. The scores are multiplied by their weights (which sum to 1) and added up. If the total is above the threshhold the photo is kept, otherwise it's marked for deletion.
+Its uses a weighted vote to combine each of these pipeline step outputs. Each signal is turned into a keep-likeness score between 0 and 1. The scores are multiplied by their weights (which sum to 1) and added up. If the total is above the threshhold the photo is kept, otherwise it's marked for deletion. One signal overrides the vote: an edge ratio of 0.6 or more marks the photo for deletion on its own, because a screenshot without detected text otherwise scores like a photo.
