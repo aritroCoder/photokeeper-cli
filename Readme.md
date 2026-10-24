@@ -4,6 +4,9 @@ Photokeeper is a CLI tool that can take one or many images (ideally from your ga
 
 This version of photokeeper is written in C++. A python version is also available in the other branch.
 
+## Usage
+Photokeeper cli is not meant to be used alone, but instead with a UI client like [Photokeeper](https://github.com/aritroCoder/photokeeper). This repo is for the enthusiasts who want to tweak with the pipeline or understand the internal implementation.
+
 ## Build and run locally
 First you need to clone the repo. Once the repo is cloned, get into the repo and run (make sure build-essentials and cmake ≥ 3.24 are installed in linux/mac, for windows I recommend using WSL and follow linux steps)
 ```
@@ -43,7 +46,7 @@ Each image is downloaded from its original source under that source's terms (Ric
 | precision / recall (delete) | 0.875 / **0.980** | 0.875 / **0.980** | 0.934 / 0.925 | n/a | 0.333 / 0.018 |
 | model size on disk | 2.6 MB | 2.6 MB | ~600 MB | 0 | 0 |
 
-Note: Positive class for precision/recall/F1 is `delete`, so a false positive is a keeper wrongly deleted. Both versions are tuned for delete recall (a missed screenshot stays in the gallery, a flagged keeper gets unticked on the review screen); at the earlier accuracy-tuned weights they scored 0.934 accuracy, 0.942 / 0.948 precision / recall. 
+Note: Positive class for precision/recall/F1 is `delete`, so a false positive is a keeper wrongly deleted. Both versions are tuned for delete recall since the user is expected to verify the selected list for any wrongly classified results before deleting.
 
 ### CLIP ViT-B/32, zero-shot
 
@@ -130,9 +133,7 @@ FFT measure instead; neither fixes the screenshot problem, which is about conten
 
 ## How does it work
 
-Photokeeper is built with edge devices in mind. It is highly optimized to process a large number of photo with very minimal CPU or memory overhead. We will get into performance details later.
-
-Instead of a single classifier, photokeeper uses a series of pipeline steps, where each of the step extract a specific feature. It uses a set of 6 features to then determine whether the photo should be kept or deleted.
+Photokeeper is built with edge devices in mind. It is highly optimized to process a large number of photo with very minimal CPU or memory overhead. Instead of a single classifier, photokeeper uses a series of pipeline steps, where each of the step extract a specific feature. It uses a set of 6 features to then determine whether the photo should be kept or deleted.
 
 ### The pipeline
 1. **Edge ratio**: The percentage of pixels in the image with horizontal or vertical gradients. We use sobel filter to compute gradients. Too much vertical or horizontal edges mean it's a boxy image, which is common for screenshots and text heavy clicks.
